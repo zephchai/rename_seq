@@ -11,6 +11,21 @@ PATTERN = "\\.\\d*\\."
 PROG = re.compile(PATTERN)
 
 
+def _frame_key(name):
+    """ Get the frame number for sorting
+
+    Args:
+        name (str): Name of the file
+
+    Returns:
+        int: The frame number in integer
+    """
+    match = PROG.search(name)
+    if not match:
+        return -1
+    return int(match.group(0)[1:-1])
+
+
 def group_files_in_seq(files):
     """ Group the files into respective sequences
         Example:
@@ -55,7 +70,7 @@ def get_rename_map(files, padding=0, start=1):
         return result
 
     # sort the files so that the rename will be in the correct order
-    files.sort()
+    files.sort(key=_frame_key)
 
     # Loop through the files and add the source and target as tuple into result
     for i, f in enumerate(files, start=start):

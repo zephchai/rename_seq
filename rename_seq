@@ -3,67 +3,32 @@
 Main executable for rename_seq
 """
 import argparse
-import os
-import shutil
 
-from rename_seq import (rs_logging,
-                        utils as rs_utils)
+import rs_logging
+import rename_seq
 LOGGER = rs_logging.Logger.get_logger("rename_seq")
 
 
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("path", help="Path to the images folder")
-    parser.add_argument("--padding", default=1, type=int, help="Number of digits for the frame number")
-    parser.add_argument("--start", default=1, type=int, help="Start frame to renumber to")
-    parser.add_argument("--new_dir", help="New directory for the renamed files."
-                                          "Source files will be copied instead of renamed")
-    parser.add_argument("-n", "--dryrun", help="dryrun mode to test the rename", action="store_true")
+    parser.add_argument("--padding", default=1, type=int,
+                        help="Number of digits for the frame number")
+    parser.add_argument("--start", default=1, type=int,
+                        help="Start frame to renumber to")
+    parser.add_argument("--new_dir",
+                        help="New directory for the renamed files. "
+                             "Source files will be copied instead of renamed")
+    parser.add_argument("-n", "--dryrun",
+                        help="dryrun mode to test the rename",
+                        action="store_true")
     return parser.parse_args()
 
 
 def main():
     args = get_args()
-    # Make sure the path exists
-    if not os.path.exists(args.path) or not os.path.isdir(args.path):
-        LOGGER.error("Input path is not valid: {0}".format(args.path))
-        LOGGER.error("Please make sure path exists and is a folder")
-        return
-
-    # resolve the given path to realpath
-    src_dir = os.path.realpath(args.path)
-    dst_dir = os.path.realpath(args.new_dir or args.path)
-    shutil_op = shutil.move if dst_dir == src_dir else shutil.copy2
-    if not args.dryrun and not os.path.exists(dst_dir):
-        os.makedirs(dst_dir)
-
-    # Filter away items that are not files
-    files = [f for f in os.listdir(src_dir) if os.path.isfile(os.path.join(src_dir, f))]
-    if not files:
-        LOGGER.error("There are no files in {0}".format(src_dir))
-        return
-
-    # Group the files into sequences
-    # If sequence_dict is empty then there are no files with frame number in the folder
-    sequence_dict = rs_utils.group_files_in_seq(files)
-    if not sequence_dict:
-        LOGGER.error("There are no files with frame number in {0}".format(src_dir))
-        return
-
-    # For each of the sequence, get a mapping from source to new name
-    for sequence in sequence_dict.values():
-        mappings = rs_utils.get_rename_map(sequence,
-                                           padding=args.padding,
-                                           start=args.start)
-        if args.dryrun:
-            # Dryrun mode. Print out the src --> dst mapping
-            for src, dst in mappings:
-                LOGGER.info("{0} --> {1}".format(os.path.join(args.path, src), os.path.join(dst_dir, dst)))
-        else:
-            for src, dst in mappings:
-                shutil_op(os.path.join(args.path, src), os.path.join(dst_dir, dst))
-
-    LOGGER.info("Finished renaming files")
+    rename_seq.rename_seq(args.path, padding=args.padding, start=args.start,
+                          new_dir=args.new_dir, dryrun=args.dryrun)
 
 
 if __name__ == "__main__":
